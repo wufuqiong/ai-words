@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AIWord, WordState } from '../types';
-import { generateWordImage, speakWord } from '../services/geminiService';
+import { speakWord } from '../services/Service';
 
 interface WordCardProps {
   wordData: AIWord;
@@ -13,10 +13,29 @@ const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
   const fetchImage = async () => {
     setState({ loading: true });
     try {
-      const url = await generateWordImage(wordData.word);
-      setState({ imageUrl: url, loading: false });
+      const imageUrl = `/data/imgs/${wordData.word.toLowerCase()}.png`;
+      
+      // Verify image exists by fetching
+      const response = await fetch(imageUrl, { method: 'HEAD' });
+      
+      if (response.ok) {
+        setState({ imageUrl, loading: false });
+      } else {
+        // Try with .jpg extension
+        const jpgUrl = `/data/imgs/${wordData.word.toLowerCase()}.jpg`;
+        const jpgResponse = await fetch(jpgUrl, { method: 'HEAD' });
+        
+        if (jpgResponse.ok) {
+          setState({ imageUrl: jpgUrl, loading: false });
+        } else {
+          setState({ 
+            loading: false, 
+            error: `No image found for "${wordData.word}"` 
+          });
+        }
+      }
     } catch (err) {
-      setState({ loading: false, error: "Oops! Couldn't make a picture right now." });
+      setState({ loading: false, error: "Failed to load image" });
     }
   };
 
