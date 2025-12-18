@@ -8,32 +8,23 @@ interface WordCardProps {
 const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
   const [state, setState] = useState<WordState>({ loading: false });
 
-  // Helper function to get the correct base URL for GitHub Pages
-  const getBaseUrl = () => {
-    // In development, use empty string for relative paths
-    // In production on GitHub Pages, it's usually '/repo-name'
-    if (process.env.NODE_ENV === 'production') {
-      // Get the repository name from package.json homepage or window location
-      const repoName = process.env.PUBLIC_URL || '';
-      return repoName;
-    }
-    return '';
-  };
-
   const fetchImage = async () => {
     setState({ loading: true });
     try {
-      const baseUrl = getBaseUrl();
-      const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+      const imageName = wordData.word.toLowerCase();
+      
+      // In Vite, you can use import.meta.env.BASE_URL for the base path
+      const baseUrl = import.meta.env.BASE_URL || '';
+      
+      // Try .png first, then .jpg
+      const extensions = ['.png', '.jpg', '.jpeg'];
       let foundUrl = '';
       let found = false;
 
-      // Try each extension
       for (const ext of extensions) {
-        const imageUrl = `${baseUrl}/data/imgs/${wordData.word.toLowerCase()}${ext}`;
+        const imageUrl = `${baseUrl}data/imgs/${imageName}${ext}`;
         
         try {
-          // Use fetch to check if image exists
           const response = await fetch(imageUrl, { method: 'HEAD' });
           if (response.ok) {
             foundUrl = imageUrl;
@@ -41,7 +32,7 @@ const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
             break;
           }
         } catch (err) {
-          continue; // Try next extension
+          continue;
         }
       }
 
@@ -57,7 +48,7 @@ const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
       console.error('Error loading image:', err);
       setState({ 
         loading: false, 
-        error: "Failed to load image. Check console for details." 
+        error: "Failed to load image" 
       });
     }
   };
@@ -92,20 +83,12 @@ const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
             alt={wordData.word} 
             className="w-full h-full object-cover"
             onError={(e) => {
-              // If image fails to load, try to load a fallback
-              const img = e.target as HTMLImageElement;
-              const currentSrc = img.src;
-              const fallbackUrl = currentSrc.replace(/\.png$/, '.jpg').replace(/\.jpg$/, '.jpeg');
-              
-              if (fallbackUrl !== currentSrc) {
-                img.src = fallbackUrl;
-              } else {
-                setState({ 
-                  ...state, 
-                  imageUrl: undefined, 
-                  error: "Image failed to load" 
-                });
-              }
+              console.error('Image failed to load:', state.imageUrl);
+              setState({ 
+                ...state, 
+                imageUrl: undefined, 
+                error: "Image failed to load" 
+              });
             }}
           />
         ) : (

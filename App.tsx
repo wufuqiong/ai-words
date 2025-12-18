@@ -133,21 +133,6 @@ const App: React.FC = () => {
             />
           ))}
         </div>
-
-        <section className="mt-16 text-center bg-white p-8 rounded-3xl shadow-lg border-t-8 border-yellow-400 max-w-3xl">
-          <h2 className="text-2xl font-bold text-blue-800 mb-4">Daily Challenge! 🎨</h2>
-          <p className="text-gray-700 mb-6">
-            Find the hidden <span className="font-bold text-blue-500 underline">"ai"</span> in every card. 
-            Can you say the words out loud as you swipe?
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {['sn-ai-l', 'tr-ai-n', 'br-ai-d', 'gr-ai-n'].map((chunk) => (
-              <span key={chunk} className="text-lg font-bold p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
-                {chunk}
-              </span>
-            ))}
-          </div>
-        </section>
       </main>
 
       {/* Footer */}
