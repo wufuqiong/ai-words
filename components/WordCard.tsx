@@ -1,7 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
 import { AIWord, WordState } from '../types';
-import { speakWord } from '../services/Service';
 
 interface WordCardProps {
   wordData: AIWord;
@@ -10,32 +8,57 @@ interface WordCardProps {
 const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
   const [state, setState] = useState<WordState>({ loading: false });
 
+  // Helper function to get the correct base URL for GitHub Pages
+  const getBaseUrl = () => {
+    // In development, use empty string for relative paths
+    // In production on GitHub Pages, it's usually '/repo-name'
+    if (process.env.NODE_ENV === 'production') {
+      // Get the repository name from package.json homepage or window location
+      const repoName = process.env.PUBLIC_URL || '';
+      return repoName;
+    }
+    return '';
+  };
+
   const fetchImage = async () => {
     setState({ loading: true });
     try {
-      const imageUrl = `/data/imgs/${wordData.word.toLowerCase()}.png`;
-      
-      // Verify image exists by fetching
-      const response = await fetch(imageUrl, { method: 'HEAD' });
-      
-      if (response.ok) {
-        setState({ imageUrl, loading: false });
-      } else {
-        // Try with .jpg extension
-        const jpgUrl = `/data/imgs/${wordData.word.toLowerCase()}.jpg`;
-        const jpgResponse = await fetch(jpgUrl, { method: 'HEAD' });
+      const baseUrl = getBaseUrl();
+      const extensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+      let foundUrl = '';
+      let found = false;
+
+      // Try each extension
+      for (const ext of extensions) {
+        const imageUrl = `${baseUrl}/data/imgs/${wordData.word.toLowerCase()}${ext}`;
         
-        if (jpgResponse.ok) {
-          setState({ imageUrl: jpgUrl, loading: false });
-        } else {
-          setState({ 
-            loading: false, 
-            error: `No image found for "${wordData.word}"` 
-          });
+        try {
+          // Use fetch to check if image exists
+          const response = await fetch(imageUrl, { method: 'HEAD' });
+          if (response.ok) {
+            foundUrl = imageUrl;
+            found = true;
+            break;
+          }
+        } catch (err) {
+          continue; // Try next extension
         }
       }
+
+      if (found) {
+        setState({ imageUrl: foundUrl, loading: false });
+      } else {
+        setState({ 
+          loading: false, 
+          error: `Image for "${wordData.word}" not found` 
+        });
+      }
     } catch (err) {
-      setState({ loading: false, error: "Failed to load image" });
+      console.error('Error loading image:', err);
+      setState({ 
+        loading: false, 
+        error: "Failed to load image. Check console for details." 
+      });
     }
   };
 
@@ -44,7 +67,15 @@ const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
   }, [wordData.word]);
 
   const handleSpeak = () => {
-    speakWord(wordData.word);
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(wordData.word);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.error('Speech synthesis not supported');
+    }
   };
 
   return (
@@ -53,23 +84,42 @@ const WordCard: React.FC<WordCardProps> = ({ wordData }) => {
         {state.loading ? (
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-2"></div>
-            <p className="text-blue-500 font-medium">Creating magic...</p>
+            <p className="text-blue-500 font-medium">Loading image...</p>
           </div>
         ) : state.imageUrl ? (
           <img 
             src={state.imageUrl} 
             alt={wordData.word} 
             className="w-full h-full object-cover"
+            onError={(e) => {
+              // If image fails to load, try to load a fallback
+              const img = e.target as HTMLImageElement;
+              const currentSrc = img.src;
+              const fallbackUrl = currentSrc.replace(/\.png$/, '.jpg').replace(/\.jpg$/, '.jpeg');
+              
+              if (fallbackUrl !== currentSrc) {
+                img.src = fallbackUrl;
+              } else {
+                setState({ 
+                  ...state, 
+                  imageUrl: undefined, 
+                  error: "Image failed to load" 
+                });
+              }
+            }}
           />
         ) : (
           <div className="p-4 text-center">
-             <p className="text-red-400">{state.error || "Click to retry"}</p>
-             <button 
+            <p className="text-red-500 font-medium mb-2">Image not found</p>
+            <p className="text-gray-600 text-sm mb-3">
+              Couldn't find: {wordData.word.toLowerCase()}.png/jpg
+            </p>
+            <button 
               onClick={fetchImage}
-              className="mt-2 px-4 py-1 bg-blue-500 text-white rounded-full text-sm"
-             >
-               Retry
-             </button>
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-full text-sm hover:bg-blue-600 transition-colors"
+            >
+              Retry Loading
+            </button>
           </div>
         )}
       </div>
